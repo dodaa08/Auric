@@ -40,16 +40,14 @@ export const balances = t.pgTable("balances", {
      t.check("locked_non_negative", sql`${table.locked} >= 0`)
 ]);
 
-// Todo
-// Constraints for tick and step size and understing it better with how it will be used!!!!!!11
 
 export const markets = t.pgTable("markets", {
     id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
     symbol : t.varchar({length : 32}).unique().notNull(),
     baseAssetId : t.integer("base_asset_id").notNull().references(()=>assets.id),
     quoteAssetId : t.integer("quote_asset_id").notNull().references(()=>assets.id),
-    tickSize : t.bigint({mode : "bigint"}).notNull(),
-    stepSize : t.bigint({mode : "bigint"}).notNull(),
+    tickSize : t.bigint("tick_size", {mode : "bigint"}).notNull(),  // Checks for prices
+    stepSize : t.bigint("step_size", {mode : "bigint"}).notNull(),  // checks for currency size
     createdAt: t.timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     minOrderSize : t.bigint("min_order_size", { mode: "bigint" }).notNull(),
     isActive : t.boolean("is_active").notNull().default(true),
@@ -59,7 +57,7 @@ export const markets = t.pgTable("markets", {
      t.check("min_size_positive", sql`${table.minOrderSize} > 0`),
      t.check("tick_positive", sql`${table.tickSize} > 0`),
      t.check("step_positive", sql`${table.stepSize} > 0`),
-    //  t.check("min_size_on_step", sql`${table.minOrderSize} % ${table.stepSize} = 0`),  
+     t.check("min_size_on_step", sql`${table.minOrderSize} % ${table.stepSize} = 0`),
 ]);
 
 
@@ -90,3 +88,20 @@ export const orders = t.pgTable("orders", {
   t.index("orders_user_created_idx").on(table.userId, table.createdAt),
 ]);
 
+
+export const trades = t.pgTable("trades", {
+    id: t.bigint("id", { mode: "bigint" }).generatedAlwaysAsIdentity(),
+    marketId: t.integer("market_id").notNull().references(() => markets.id),
+    price: t.bigint("price", { mode: "bigint" }),
+    qty: t.bigint("qty", { mode: "bigint" }).notNull(),
+    buyOrderid : t.bigint("buy_order_id", {mode : "bigint"}).notNull().references(()=>orders.id),
+    sellOrderid : t.bigint("sell_order_id", {mode : "bigint"}).notNull().references(()=>orders.id),
+    takerSide: sideT("taker_side").notNull(),
+    createdAt: t.timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table)=>[
+    t.primaryKey({columns : [table.id, table.createdAt]}),
+    t.check("trade_price_positive", sql`${table.price} > 0`),
+    t.check("trade_qty_positive", sql`${table.qty} > 0`),
+    t.check("buy_n_sell_should_not_eq", sql`${table.buyOrderid} <> ${table.sellOrderid}`),
+    t.index("trades_market_time__idx").on(table.marketId, table.createdAt)
+]);
