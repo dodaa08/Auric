@@ -1,4 +1,4 @@
-# CEX
+# Matching Engine
 
 A centralized cryptocurrency exchange backend.
 
