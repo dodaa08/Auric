@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import {assets, balances, db, markets, orders, users} from "@repo/db";
 import {eq, gte, and} from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { createOrderType } from "@repo/types";
+import { createOrderType, listQuery } from "@repo/types";
 
 
 class ApiError extends Error {
@@ -87,8 +87,93 @@ const CreateOrder = async (req : Request, res : Response)=>{
     }
 }
 
+const getOrder = async (req : Request, res : Response)=>{
+    let orderId: bigint;
+    try{
+        orderId = BigInt(String(req.params.id)); 
+        const [findO] = await db.select().from(orders).where(eq(orders.id, orderId));
+        if(!findO){
+            throw new ApiError(400, "OrderId invalid");
+        };
+        
+       return res.status(200).json({
+  orderId: findO.id.toString(),
+  orderStatus: findO.status,
+  marketId: findO.marketId,
+  side: findO.side,
+  type: findO.type,
+  price: findO.price?.toString() ?? null,
+  qty: findO.qty.toString(),
+  filledQty: findO.filledQty.toString(),
+  remainingQty: (findO.qty - findO.filledQty).toString(),
+  createdAt: findO.createdAt,
+  updatedAt: findO.updatedAt,
+});
+
+    }
+    catch(e){
+if (e instanceof ApiError) return res.status(e.status).json({ error: e.message });
+        return res.status(404).json({
+            error : "internal error"
+        });
+    }
+};
+
+
+
+const listOrders = async (req : Request, res : Response)=>{
+    const filters  = listQuery.safeParse(req.query);
+    if(!filters.success){
+        return res.status(400).json({ error: "" });
+    };
+
+    const { status, marketId, side, limit, cursor } = filters.data;
+
+    try{
+
+        
+        
+    }
+    catch(e){
+
+    }
+}
+
+
 
 // Create the order
-orderR.post("/create", CreateOrder);
+orderR.post("/", CreateOrder);
+// Get user's order
+orderR.get("/:id", getOrder);
+
+// Cancel the order
+orderR.delete("/:id", async (req, res)=>{
+     let orderId: bigint;
+    try{
+        orderId = BigInt(String(req.params.id)); 
+        const [findO] = await db.select().from(orders).where(eq(orders.id, orderId));
+        if(!findO){
+            throw new ApiError(400, "OrderId invalid");
+        };
+
+        const [rows] = await db.delete(orders).where(eq(orders.id, orderId)).returning();
+        if(!rows){
+
+        }
+
+        return res.status(200).json({
+            
+        });
+
+    }catch(e){
+if (e instanceof ApiError) return res.status(e.status).json({ error: e.message });
+        return res.status(404).json({
+            error : "internal error"
+        });
+    }
+});
+
+// Get open orders from history
+orderR.get("/", listOrders);
 
 export default orderR;
