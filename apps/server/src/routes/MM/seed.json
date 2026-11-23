@@ -1,0 +1,24 @@
+{
+  "mmUserId": 127,
+  "users": [
+    { "id": 127, "name": "market-maker", "email": "mm@cex.local", "passHash": "seed-only" }
+  ],
+  "assets": [
+    { "symbol": "BTC", "name": "Bitcoin", "decimals": 8 },
+    { "symbol": "USDT", "name": "Tether", "decimals": 8 }
+  ],
+  "markets": [
+    {
+      "symbol": "BTC/USDT",
+      "base": "BTC",
+      "quote": "USDT",
+      "tickSize": "100000000",
+      "stepSize": "1000000",
+      "minOrderSize": "1000000"
+    }
+  ],
+  "balances": [
+    { "userId": 127, "asset": "USDT", "available": "1000000000000000" },
+    { "userId": 127, "asset": "BTC", "available": "1000000000000" }
+  ]
+}

@@ -23,5 +23,21 @@ export const listQuery = z.object({
   cursor: z.coerce.bigint().positive().optional(), // last order id from the previous page
 });
 
+export const orderResponse = z.object({
+  id: z.bigint().transform((v) => v.toString()),
+  userId: z.number().int(),
+  marketId: z.number().int(),
+  side: z.enum(["buy", "sell"]),
+  type: z.enum(["limit", "market"]),
+  price: z.bigint().transform((v) => v.toString()).nullable(),
+  qty: z.bigint().transform((v) => v.toString()),
+  filledQty: z.bigint().transform((v) => v.toString()),
+  lockedAmount: z.bigint().transform((v) => v.toString()),
+  status: z.enum(["open", "partially_filled", "filled", "cancelled", "rejected"]),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 export type PlaceOrder = z.infer<typeof createOrderType>;
 export type ListQuery = z.infer<typeof listQuery>;
+export type OrderResponse = z.output<typeof orderResponse>;
