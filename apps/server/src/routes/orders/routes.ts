@@ -5,18 +5,28 @@ import { db, orders } from "@repo/db";
 import { eq, and, inArray, SQL, desc } from "drizzle-orm";
 import { createOrderType, listQuery, orderResponse } from "@repo/types";
 import { ApiError, placeOrder } from "./service";
+import { pubtoStream } from "@repo/redis";
 
 const CreateOrder = async (req : Request, res : Response)=>{
     const orderD = createOrderType.safeParse(req.body);
 
     if(!orderD.success) {
         return res.status(404).json({
-            message : "no orders found"
+            message : "Invalid body structure or market doesn't exist",
+            details: orderD.error.flatten().fieldErrors,
         });
     }
 
     try{
         const order = await placeOrder(orderD.data);
+
+        // Todo It can crash after db inserts here, so need a retry mechanism
+        try {
+            await pubtoStream(orderResponse.parse(order));
+        } catch (e) {
+            console.error("failed to publish order event", e);
+        }
+
         return res.status(201).json({ orderId: order.id.toString(), status: order.status });
     }
     catch(e){
@@ -95,7 +105,6 @@ const listOrders = async (req : Request, res : Response)=>{
     }
 }
 
-
 // Create the order
 orderR.post("/", CreateOrder);
 // Get user's order
@@ -112,6 +121,7 @@ orderR.delete("/:id", async (req, res)=>{
         };
 
         const [rows] = await db.delete(orders).where(eq(orders.id, orderId)).returning();
+        
         if(!rows){
             return res.status(404).json({
                 message : "order not found"
@@ -119,8 +129,7 @@ orderR.delete("/:id", async (req, res)=>{
         }
 
         return res.status(200).json({
-            message :  `Deleted ${rows.id}`,
-            data : rows
+            orderId :  `Deleted order: ${rows.id}`
         });
 
     }catch(e){
@@ -130,6 +139,7 @@ if (e instanceof ApiError) return res.status(e.status).json({ error: e.message }
         });
     }
 });
+
 
 // Get open orders from history
 orderR.get("/", listOrders);

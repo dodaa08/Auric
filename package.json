@@ -30,7 +30,7 @@
     "apps/*",
     "packages/*",
     "packages/common/types",
-    "packages/common/types"
+    "packages/common/redis"
   ],
   "dependencies": {
     "dotenv": "^18.0.10"
