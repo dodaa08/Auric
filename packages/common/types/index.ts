@@ -38,6 +38,21 @@ export const orderResponse = z.object({
   updatedAt: z.date(),
 });
 
+export const streamOrder = z.object({
+  id: z.string(),
+  userId: z.coerce.number().int(),
+  marketId: z.coerce.number().int(),
+  side: z.enum(["buy", "sell"]),
+  type: z.enum(["limit", "market"]),
+  price: z.string().transform((v) => (v === "" ? null : v)),
+  qty: z.string(),
+  filledQty: z.string(),
+  lockedAmount: z.string(),
+  status: z.enum(["open", "partially_filled", "filled", "cancelled", "rejected"]),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
 export type PlaceOrder = z.infer<typeof createOrderType>;
 export type ListQuery = z.infer<typeof listQuery>;
 export type OrderResponse = z.output<typeof orderResponse>;

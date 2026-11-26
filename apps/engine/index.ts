@@ -1,7 +1,8 @@
-import { redis } from "@repo/redis";
-import { orderResponse, type OrderResponse } from "@repo/types";
+import { consume } from "@repo/redis";
+import { orderResponse, streamOrder, type OrderResponse } from "@repo/types";
 import { db, orders, eq, and, inArray, asc } from "@repo/db";
 
+const marketId = 1;
 const bids = new Map<bigint, OrderResponse[]>();
 const asks = new Map<bigint, OrderResponse[]>();
 
@@ -53,20 +54,50 @@ const bestAsk = ()=>{
   return bestBid;
 };
 
+
+const ids = new Set<string>;
+
+const handleOrder = async (fields : Record<string, string>) => {
+  const parsed = streamOrder.safeParse(fields);
+  if(!parsed.success){
+    console.error("bad order message", parsed.error.flatten().fieldErrors);
+    return;
+  }
+  const order = parsed.data;
+  if(order.marketId !== marketId){
+    return;
+  }
+  if (ids.has(order.id)) return;
+
+  addBook(order);
+  ids.add(order.id);
+  console.log("added", order.id, "best bid", bestBid(), "best ask", bestAsk());
+};
+
+
+const matchTradeAndPubtoStream = async ()=>{
+   
+};
+
+
 const main = async () => {
-  const marketId = Number(1);
   if (!marketId) throw new Error("MARKET_ID missing");
 
   const rows = await loadOpenOrders(marketId);
   for (const row of rows) {
+    const order = orderResponse.parse(row);
     addBook(orderResponse.parse(row));
+    ids.add(order.id);
   }
 
   console.log("loaded", rows.length, "orders");
   console.log("best bid", bestBid(), "best ask", bestAsk());
+  await consume("engine", "w1", handleOrder);
+
 };
 
 main().catch((e) => {
   console.error("engine crashed", e);
   process.exit(1);
 });
+
